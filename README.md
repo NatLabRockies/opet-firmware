@@ -9,21 +9,21 @@ This repository contains everything relating to the firmware of the OPET device 
 ## PV device load functions
 - The main application of OPET is long term performance measurements of PV devices in field or under controlled environmental conditions
 - device performance degradation can be impacted by operation point, hence different load functions have been implemented
-- the load mode is controlled with the `LOAD:MODE (N)` command, see also section 4.3.3
+- the load mode is controlled with the `LOAD:MODE (N)` command, see also [Load Control Commands](#load-control-commands)
     - \(N\) is the desired operation mode ID as detailed in the following sections
     - set the load mode before switching the output on after first boot-up, as the standard EEPROM load mode at boot-up is "0 - none" and the output cannot be enabled
-        - see AutoStart function in section 3.7 to change this behaviour
+        - see AutoStart function in [Auto-Start System](#auto-start-system) to change this behaviour
 - use the `OUTP 1` or `OUTP 0` commands to enable or disable the output
     - IV curve or transient measurements cannot be performed unless the output is enabled
     - if an invalid load mode is entered/requested, the output will switch off automatically
     - if only IV curve or transient measurements are required without active load control, enable the output with the open circuit (V<sub>oc</sub>) load mode
-- use the `READ?` function to collect load measurement data and with system status, see section 4.3.2.1 for more details and data formatting
+- use the `READ?` function to collect load measurement data and with system status, see [Read status and output measurements](#read-status-and-output-measurements) for more details and data formatting
 
 ### Open circuit load
 - Use `LOAD:MODE 1` to enter V<sub>oc</sub> mode
 - During Open circuit (V<sub>oc</sub>) load the output of OPET is kept at high impedance, with the driver MOSFET and controller effectively being disabled as in off-mode
 - The only current that can flow is the current trough the voltage sense terminals, which is dependent on the voltage reading and range
-- \~0.9 mA at 100V, see impedance specification for each range in Table 1 in section 1.4.1
+- \~0.9 mA at 100V (see impedance specification for each range in documentation)
     - This leakage current is recorded on the PV current channel
 
 ### Short Circuit load
@@ -74,25 +74,25 @@ This repository contains everything relating to the firmware of the OPET device 
     - Measure IV curve
     - Reset previous set-point and range conditions
     - Process data
-- Current and voltage measurement ranges are only adjusted if the OPET is in auto-range mode, see section 4.3.6 for more details
+- Current and voltage measurement ranges are only adjusted if the OPET is in auto-range mode, see [Measurement range control](#measurement-range-control) for more details
 - During the IV curve measurement process following is done for each point in order:
     - Voltage reference set-point is transferred
     - Waiting settling time
     - Repeat measure voltage and current dependent on averaging options
     - Measure voltage one last time if asymmetric voltage option enabled
-- Use commands in section 4.3.4 to adjust the measurement options
+- Use commands in [IV Curve Tracing Commands](#iv-curve-tracing-commands) to adjust the measurement options
 - To measure an IV curve, following program flow steps should be taken:
     - make sure output is on without active errors
     - Call `IV:MEAS` to start the IV curve measurement
     - OPET replies with `IV:MEAS (XXX)`, whereas (XXX) is the estimated IV curve measurement time in ms
         - This can be used to optimise a timeout function in program flow
         - If XXX is zero, the IV curve measurement internally aborted, usually because the output is disabled
-    - Wait at least 20ms (one control loop time cycle, see section 5.3.3)
+    - Wait at least 20ms (one control loop time cycle, see [Control loop timer multiplier](#control-loop-timer-multiplier))
     - Send `\*OPC?` and wait for reply or wait until IV tracing is finished
         - A response to this command is send right after the IV finishes
     - Send `IV:DATA?` to collect the latest IV data
 - the distribution of voltage set-points over the IV curve can be linear with equal point distribution or cosine with more dense voltage point distribution around VOC
-    - see section 4.3.4 for command details
+    - see [IV Curve Tracing Commands](#iv-curve-tracing-commands) for command details
     - the cosine phase-angle maximum can be used to tweak the position of the maximum density of points or its point density
         - density near V<sub>oc</sub> when φ is below π/2, the higher the more points around V<sub>oc</sub>
         - position can be shifted towards P<sub>mp</sub> with π \> φ \> π/2, the higher the further towards I<sub>sc</sub>
@@ -119,7 +119,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - As above, transient is measured twice, once for voltage and once for current
     - Done do achieve an adjustable measurement resolution down to \~12 µs, comprised of 4 µs conversion time and 8 µs data transfer and processing time
     - would otherwise need \~100 µs to change the input channel on the multiplexer
-- Use commands in section 4.3.5 to adjust the measurement options
+- Use commands in [Transient measurement control](#transient-measurement-control) to adjust the measurement options
     - The point delay time given in \[µs\] is a good approximation, but not exact
     - Below the minimum of \~12 µs the delay time is ignored
 - Data is transferred in uncalibrated raw format
@@ -128,13 +128,13 @@ This repository contains everything relating to the firmware of the OPET device 
     - make sure output is on without active errors
     - set start and end voltage using `LOAD:SETVOLT (voltage)` and `TRANS:ENDVOLT (voltage)`
     - Call `TRANS:MEAS` to start the transient measurement
-    - Wait at least \~20ms (one control loop time cycle, see section 5.3.3)
+    - Wait at least \~20ms (one control loop time cycle, see [Control loop timer multiplier](#control-loop-timer-multiplier))
     - Send `\*OPC?` and wait for reply or wait until measurement is finished
         - A response to this command is send right after the transient measurement is finished
     - Send `IV:DATA?` to collect the latest transient data
 
 ## System status and error handling
-- When using the `READ?` command to request load measurement data the system status byte is also transferred (see section 4.3.2.1)
+- When using the `READ?` command to request load measurement data the system status byte is also transferred (see [Read status and output measurements](#read-status-and-output-measurements))
 - The system status byte mainly details the output status, calibration mode status and error indicators
 - In normal operation, the status byte should just return "1", meaning output is on without any errors
 - The calibration status bit is enabled only during calibration, at which the current and voltage readings are returned in raw format without calibration applied
@@ -146,27 +146,27 @@ This repository contains everything relating to the firmware of the OPET device 
     - If the range is still too low for the current flow, the overcurrent bypass will reactivate again after clearing/resetting
     - The output state is not affected by the overcurrent bypass protection
     - The current reading is not representative of actual current flow when bypasses is engaged and only shows what is still going through the shunt, while the majority of current is bypassed
-    - see section 4.3.6.4 for more details
+    - see [Overcurrent bypass reset](#overcurrent-bypass-reset) for more details
 - the bias voltage error indicator bit enables when the bias voltage goes out of range
     - this error will temporarily disable the output of the OPET, it will still show enabled to indicate that it will come on again, but will not measure IV curves and only set to V<sub>oc</sub> loading
     - once the bias voltage is within range for \~5 s, the output will be activated again
     - the time delayed return to normal operations reduces the stress on the system in case of recurring errors, for example where the voltage output fails above a specific current flow due to an overcurrent dropout off the power supply
-    - the bias voltage range can be adjusted, see section 5.3.14 for more details
+    - the bias voltage range can be adjusted, see [Bias Voltage Limits Protection](#bias-voltage-limits-protection) for more details
 - the NTC 1 and NTRC 2 over Temperature errors indicate when the OPET electronics are overheating or its too cold
     - if the temperature is too high or too low and reaches the disconnect threshold, the output will be disabled and at V<sub>oc</sub> loading, IV curve can also not be measured
     - for as long as the temperature is between disconnect and reconnect threshold after a disconnect, the output is off and at V<sub>oc</sub>, but IV curves and transient curves can be measured
     - once the reconnect threshold is reached after cooling down / warming up, the output is re-enabled to the previous control state
-    - the temperature threshold can be adjusted, see section 5.3.13 for more details
+    - the temperature threshold can be adjusted, see [Operating Temperature limits configuration](#operating-temperature-limits-configuration) for more details
 
 ## Cooling fan output control
-- with the `FAN:MODE` command the cooling fan control can either be controlled manually to on/off or set to automatic control mode, see section 4.3.8 for command details
+- with the `FAN:MODE` command the cooling fan control can either be controlled manually to on/off or set to automatic control mode, see [Fan Control](#fan-control) for command details
 - in auto mode, the fan is controlled based on:
     - the NTC1 and NTC 2 temperature
     - the power load on the MOSFET
 - the auto mode uses threshold hysteresis on/off control which basically switches the fan on if the upper threshold is exceeded and switches off if the value is less than the lower threshold
 - auto mode uses switched-on priority, meaning the fan is controlled on if any one control channel is requesting the fan to be on and it is only off if all channels request the fan to be off
 - the switching frequency of the fan in auto control is also limited by a timer counter that limits how fast the fan can be switched off
-- thresholds can be adjusted via the EEPROM setting, see section 5.3.19
+- thresholds can be adjusted via the EEPROM setting, see [Operating Temperature limits configuration](#operating-temperature-limits-configuration)
 
 ## PI-Controller adjustments
 - The driver MOSFET PI-controller on the OPET PCB is actively regulating the voltage at the PV device
@@ -175,7 +175,7 @@ This repository contains everything relating to the firmware of the OPET device 
     - also the shape of the IV curve measurements can be affected
 - due to the wide variety of PV devices with different load capacitances and stray induction, output voltages and currents, it is difficult to optimise the PI-controller to work for all devices at once
 - hence the PI-controller can be adjusted electronically with a selection of 4 gain resistors and 4 integrator capacitors
-- in general, increasing the control values for integrator capacitors and gain resistor makes the response of the OPET slower and more stable (see also details in section 4.3.8)
+- in general, increasing the control values for integrator capacitors and gain resistor makes the response of the OPET slower and more stable (see also details in [PI Driver Control](#pi-driver-control))
     - increasing the integrator capacitor ID value increases the integrator capacitance, which reduces the voltage slew rate of the driver MOSFET gain voltage
     - increasing the gain resistor ID value, reduces the proportional gain response to the error amplifier on the driver MOSFET and hence the speed at which a set-point is reached
 - the PI-controller stability is also dependent on the voltage range setting, hence it is advised to check the response throughout the entire PV device IV curve using the manual control mode in auto-range setting, to check the stability of the controller
@@ -192,7 +192,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - in normal configuration the OPET system needs to be controlled by a computer first to enable the output and enter a load mode
 - with the auto-start function enabled, the OPET will automatically enable the output and enter the selected load mode right after power-up
     - this helps getting the system going again after a power fault without having to check & start-up the control computer
-- Auto-start can be enabled via the EEPROM control values, see section 5.3.18 for more details
+- Auto-start can be enabled via the EEPROM control values, see [Auto-Start System](#auto-start-system) for more details
 
 # Communication & Control
 
@@ -335,7 +335,7 @@ This repository contains everything relating to the firmware of the OPET device 
         - Indicates if the overcurrent protection bypass is active or not
         - If active, the current reading is invalid as the current is bypasses through a MOSFET to protect the shunt resistor from overloading and overheating
         - If current range is set to auto range this will be reset automatically unless the current is above the rating (maximum range) of the OPET board
-        - If current is in manual range this will have to be reset manually (see section 4.3.6.4)
+        - If current is in manual range this will have to be reset manually (see [Overcurrent bypass reset](#overcurrent-bypass-reset))
     - Bit 5: Bias Voltage error
         - Indicates if the bias voltage is out of specified boundaries
         - for example, when supply is switched off
@@ -351,7 +351,7 @@ This repository contains everything relating to the firmware of the OPET device 
 		- Indicates that the main loop timer was not reset before the next interrupt
 		- basically, means that the process in the loop did not finish on time and the next loop is skipped
 		- this happens normally only after processing time extensive commands such as measuring an IV curve,
-		- if overrun flag is triggered during normal operation, it is likely that the number of measurements averaged is too high, see section 5.3.4 for further details
+		- if overrun flag is triggered during normal operation, it is likely that the number of measurements averaged is too high, see [Nu. Voltage and Current measurements averaged per cycle](#nu-voltage-and-current-measurements-averaged-per-cycle) for further details
 		- the flag is reset every time the status byte is read
 	-  Bit 9: New IV data ready
 		- As the name suggests, this flag indicates when new IV data is ready to read from the unit
@@ -438,7 +438,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `LOAD:SETVOLT?` \[LF\]
     - Example reply: LOAD:SETVOLT? \[TAB\] 1.2 \[LF\]
 - Voltage set-point value in volts can be anything, but must be positive, if the set-point is too high and cannot be reached, the system will operate at Voc
-- This set-point is used when in constant voltage mode and as the static start value during voltage transient measurements (see section 4.3.5)
+- This set-point is used when in constant voltage mode and as the static start value during voltage transient measurements (see [Transient measurement control](#transient-measurement-control))
 
 #### Current Set-Point
 - Write Command: `LOAD:SETCURR` \[TAB\] `current value` \[LF\]
@@ -571,7 +571,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `TRANS:ENDVOLT?` \[LF\]
     - Example reply: TRANS:ENDVOLT? \[TAB\] 1.01 \[LF\]
 - The parameter defines the transient end set-point voltage
-- The start point is defined by the voltage load control set-point see section 4.3.3.2
+- The start point is defined by the voltage load control set-point see [Voltage Set-Point](#voltage-set-point)
 
 #### Transient point delay in us 
 - Write Command: `TRANS:DELAY` \[TAB\] `delay in microseconds` \[LF\]
@@ -667,7 +667,7 @@ This repository contains everything relating to the firmware of the OPET device 
 
 ### Range calibration control
 - With the range calibration commands the OPET device can be calibrated without having to directly access the EEPROM memory, which simplifies the procedure
-- For specific calibration procedure details, please refer to section 6
+- For specific calibration procedure details, please refer to [Basic 2-point calibration](#basic-2-point-calibration)
 
 #### Calibration Mode Control
 - Write Command: `RANGE:CAL:MODE` \[TAB\] `mode type` \[LF\]
@@ -714,7 +714,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - When reading from this command the state of the fan control is returned in string format
     - `MAN ON`, `MAN OFF` - manual control fan turned on or off
     - `AUTO ON`, `AUTO OFF` - automated control with the current active state of the fan control (either it is turned on or off at that moment)
-- The temperature and power threshold values for the automatic fan control can be configure in the EEPROM, see section 5.3.19
+- The temperature and power threshold values for the automatic fan control can be configure in the EEPROM, see [Operating Temperature limits configuration](#operating-temperature-limits-configuration)
 
 ### PI Driver Control
 
@@ -779,14 +779,14 @@ This repository contains everything relating to the firmware of the OPET device 
     - Example reply EEROM:WRITE \[TAB\] 4 \[TAB\] 10 \[LF\]
 - This write only command directly accesses the EEPROM and should be used carefully, as there is only a finite amount of write cycles of each address space in the EEPROM memory (\~100,000)
 - As shown above this command requires 2 variables, the register address and the associated register value
-- Refer to section 5 for details regarding the register address and register value type
+- Refer to [EEPROM Address Specifications](#eeprom-address-specifications) for details regarding the register address and register value type
 
 #### Read from EEPROM
 - Command: `EEROM:READ?` \[TAB\] `register address` \[LF\]
     - Example reply EEROM:READ? \[TAB\] 4 \[TAB\] 10 \[LF\]
 - This read only command directly accesses the EEPROM, reading from the EEPROM can be done infinite amount of times
 - As shown above this command requires the register address to be accessed and the reply will contain additionally the associated value at the register address
-- Refer to the next section 5 for details regarding the register address and register value type
+- Refer to [EEPROM Address Specifications](#eeprom-address-specifications) for details regarding the register address and register value type
 
 # EEPROM Address Specifications
 
@@ -983,7 +983,7 @@ $$t = \frac{C_{val}*64}{F_{MCU}} = \ \frac{1041*64}{16000000} = 4.164\ ms\  \app
 $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - It is highly recommended to keep the main measurement loop timer at exactly one quarter of the mains frequency to enable effective noise rejection of any mains electrical interference
 - The main measurement loop timer controls the execution of communication functions, to enable effective measurement synchronisation, i.e. RS485 commands are executed during the remaining idle time after the measurements have completed
-- This timer also controls the counter for the control loop (see section below)
+- This timer also controls the counter for the control loop (see [Control loop timer multiplier](#control-loop-timer-multiplier))
 
 #### Control loop timer multiplier
 - Register ID: `7`,
@@ -1056,14 +1056,14 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Value: default `255`, standard `255`
 - Value Range: `0 ... 4, 255`
 - In case of a manually controlled range at start-up, this parameter controls the voltage range ID used, otherwise this parameter has no impact on the operation
-- See section 4.3.6.2 for voltage range ID definitions
+- See [Voltage Range ID](#voltage-range-id) for voltage range ID definitions
 
 #### Current measurement range
 - Register ID: `22`,
 - Value: default `255`, standard `255`
 - Value Range: `0 ... 5, 255`
 - In case of a manually controlled range at start-up, this parameter controls the current range ID used, otherwise this parameter has no impact on the operation
-- See section 4.3.6.3 for current range ID definitions
+- See [Current Range ID](#current-range-id) for current range ID definitions
 
 #### Voltage range switching frequency counter
 - Register ID: `23`,
@@ -1270,13 +1270,13 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Register ID: `115`
 - Value: default `0`, standard `1`
 - Value Range: `0 ... 3`
-- This parameter configures the select gain resistor of the PI controller at start-up, see section 4.3.8.2 for more information
+- This parameter configures the select gain resistor of the PI controller at start-up, see [Driver Proportional Gain Control](#driver-proportional-gain-control) for more information
 
 #### Integrator capacitor ID
 - Register ID: `116`
 - Value: default `0`, standard `1`
 - Value Range: `0 ... 3`
-- This parameter configures the selected integrator capacitor of the PI controller at start-up, see section 4.3.8.3 for more details
+- This parameter configures the selected integrator capacitor of the PI controller at start-up, see [Driver Integrator Capacitor Control](#driver-integrator-capacitor-control) for more details
 
 ### Operating Temperature limits configuration
 
@@ -1343,37 +1343,37 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Value: default `byte 0000 0000`, standard `byte 0000 0011`
 - This parameter determines the IV measurement mode settings at start-up
     - Cos IV point distribution and asymmetric voltage readings are enabled by default
-- See section 4.3.4.6 for the binary bit definitions and more details
+- See [IV measurement mode](#iv-measurement-mode) for the binary bit definitions and more details
 
 #### COS sweep maximum phase angle
 - Register ID: `142`
 - Value: default ` 1.57079`, standard ` 1.57079`
 - Value Range: `single floating point`
-- As further detailed in section 4.3.4.7 this parameter defines the maximum phase angle in radians used during cosine distributed IV curve measurements
+- As further detailed in [Cosine maximum phase in radians](#cosine-maximum-phase-in-radians) this parameter defines the maximum phase angle in radians used during cosine distributed IV curve measurements
 
 #### V<sub>oc</sub> overshoot control multiplier
 - Register ID: `143`
 - Value: default ` 1.01`, standard ` 1.01`
 - Value Range: `single floating point`
-- As further detailed in section 4.3.4.8, this multiplier is applied to the measured V<sub>oc</sub> before IV measurements and sets the IV curve endpoint control voltage at the voltage control DAC
+- As further detailed in [VOC overshoot control multiplier](#voc-overshoot-control-multiplier), this multiplier is applied to the measured V<sub>oc</sub> before IV measurements and sets the IV curve endpoint control voltage at the voltage control DAC
 
 #### IV point settling time delay
 - Register ID: `144`
 - Value: default `5`, standard `5`
 - Value Range: `1 ... 60000`
-- This parameter sets the delay time in \[ms\] between setting the output voltage till measurement of the voltage and current of the PV device, see section 4.3.4.4 for more details
+- This parameter sets the delay time in \[ms\] between setting the output voltage till measurement of the voltage and current of the PV device, see [IV point settling time delay in ms](#iv-point-settling-time-delay-in-ms) for more details
 
 #### Nu. measurements averaged per set
 - Register ID: `145`
 - Value: default `1`, standard `50`
 - Value Range: `1 ... 255`
-- Controls the number of current and voltage measurements averaged for each IV point in a single set, see section 4.3.4.5 for more details
+- Controls the number of current and voltage measurements averaged for each IV point in a single set, see [IV data Averaging control](#iv-data-averaging-control) for more details
 
 #### Nu. sets averaged per IV point
 - Register ID: `146`
 - Value: default `1`, standard `1`
 - Value Range: `1 ... 255`
-- Controls the number of current and voltage measurement sets averaged for each IV point, see section 4.3.4.5 for more details
+- Controls the number of current and voltage measurement sets averaged for each IV point, see [IV data Averaging control](#iv-data-averaging-control) for more details
 
 ### Maximum power point tracker control variables
 
@@ -1484,7 +1484,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Register ID: `166`
 - Value: default `0`, standard `0`
 - Value Range: `0 ... 4`
-- This defines the auto-start load mode ID, see details in section 4.3.3.1 for load mode ID definitions
+- This defines the auto-start load mode ID, see details in [Load Mode control](#load-mode-control) for load mode ID definitions
 - To make use of the auto-start function define the load mode desired and enable the output on bit 0 in the system control byte
 
 #### Voltage set-point
@@ -1568,8 +1568,8 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 ## OPET calibration measurement settings
 - It is advised to use a very high number of voltage and current averages to lead to an estimated measurement completion time of \~1s (including voltage and current)
 - Following setting are using in the calibration software:
-    - use 100 current and voltage measurements average per cycle (`ADC:AVR:VC 100`, see section 4.3.9.1 for more details)
-    - use a 100 current and voltage cycle averaging (`ADC:CYCLES:VC 100`, see section 4.3.9.3)
+    - use 100 current and voltage measurements average per cycle (`ADC:AVR:VC 100`, see [Number of Voltage and Current measurement averaged](#number-of-voltage-and-current-measurement-averaged) for more details)
+    - use a 100 current and voltage cycle averaging (`ADC:CYCLES:VC 100`, see [Number of Voltage and Current cycles averaged](#number-of-voltage-and-current-cycles-averaged))
     - this leads to an update time of \~ 1s, the OPET cannot really operate under those conditions, but it measures at very low noise if there are no excessive external noise sources
     - settings do cause every 2nd cycle to be skipped as the averaging per cycle takes longer, which means a cycle is twice as long (with standard EEPROM settings 120Hz cycle update not 240Hz)
 
