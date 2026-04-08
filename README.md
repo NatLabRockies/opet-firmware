@@ -1,11 +1,20 @@
-# OPET firmware introduction
-This repository contains everything relating to the firmware of the OPET device including source code.  If you are looking for the hardware or control software repositories, links are below:
+# OPET Firmware
 
-[OPET Hardware](https://github.com/NREL/opet-hardware)
+OPET (Open PV Electrical Tool) is a programmable electronic load for long-term performance measurement of photovoltaic (PV) devices in the field or under controlled environmental conditions. This repository contains the firmware source code and prebuilt release binaries for the OPET microcontroller.
 
-[OPET Control Software](https://github.com/NREL/opet-control)
+For related repositories, see:
+- [OPET Hardware](https://github.com/NREL/opet-hardware) — PCB design and schematics
+- [OPET Control Software](https://github.com/NREL/opet-control) — host-side control application
 
-# OPET firmware functions
+## Repository structure
+
+| Directory | Contents |
+|-----------|----------|
+| `Source/` | Firmware source code (C, Atmel Studio project) |
+| `HC_Release/` | Prebuilt binaries for the high-current (HC) variant |
+| `LC_Release/` | Prebuilt binaries for the low-current (LC) variant |
+
+# Firmware functions
 ## PV device load functions
 - The main application of OPET is long term performance measurements of PV devices in field or under controlled environmental conditions
 - device performance degradation can be impacted by operation point, hence different load functions have been implemented
