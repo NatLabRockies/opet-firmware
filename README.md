@@ -192,7 +192,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - in normal configuration the OPET system needs to be controlled by a computer first to enable the output and enter a load mode
 - with the auto-start function enabled, the OPET will automatically enable the output and enter the selected load mode right after power-up
     - this helps getting the system going again after a power fault without having to check & start-up the control computer
-- Auto-start can be enabled via the EEPROM control values, see [Auto-Start System](#auto-start-system) for more details
+- Auto-start can be enabled via the EEPROM control values, see [Auto-Start Load configuration](#auto-start-load-configuration) for more details
 
 # Communication & Control
 
@@ -1338,7 +1338,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Value Range: `3 ... 250`
 - This sets the number of IV point taken in IV curve and transient measurements
 
-#### IV measurement mode
+#### IV measurement mode byte
 - Register ID: `141`
 - Value: default `byte 0000 0000`, standard `byte 0000 0011`
 - This parameter determines the IV measurement mode settings at start-up
