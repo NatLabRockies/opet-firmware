@@ -23,7 +23,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Use `LOAD:MODE\t1` to enter V<sub>oc</sub> mode
 - During open circuit (V<sub>oc</sub>) load the output of OPET is kept at high impedance, with the driver MOSFET and controller effectively being disabled as in off-mode
 - The only current that can flow is the current through the voltage sense terminals, which is dependent on the voltage reading and range
-- \~0.9 mA at 100V (see [Voltage input current leakage](#voltage-input-current-leakage) for each range)
+- \~0.9 mA at 100V (see hardware specifications for each range)
     - This leakage current is recorded on the PV current channel
 
 ### Short circuit load
