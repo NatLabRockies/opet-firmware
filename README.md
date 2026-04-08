@@ -22,7 +22,7 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Open circuit load
 - Use `LOAD:MODE 1` to enter V<sub>oc</sub> mode
 - During Open circuit (V<sub>oc</sub>) load the output of OPET is kept at high impedance, with the driver MOSFET and controller effectively being disabled as in off-mode
-- The only current that can flow is the current trough the voltage sense terminals, which is dependent on the voltage reading and range
+- The only current that can flow is the current through the voltage sense terminals, which is dependent on the voltage reading and range
 - \~0.9 mA at 100V (see impedance specification for each range in documentation)
     - This leakage current is recorded on the PV current channel
 
@@ -41,11 +41,11 @@ This repository contains everything relating to the firmware of the OPET device 
 - If the setpoint voltage is above V<sub>oc</sub>, the device load will operate at V<sub>oc</sub> until the PV device output voltage can surpass the setpoint voltage, at which time set-point is held and current can flow
 
 ### Static Current tracking
-- Use `LOAD:MODE 4` to enter static current lead C<sub>SET</sub> mode
+- Use `LOAD:MODE 4` to enter static current load C<sub>SET</sub> mode
 - Use `LOAD:SETCURR (current)` to adjust the set-point, whereas (current) is the required current in \[A\]
 - Static current tracking mode is similar to the static voltage mode, but controlling current instead of voltage
 - set-point range is between zero amps (V<sub>oc</sub>) and short circuit (I<sub>sc</sub>),
-- if the setpoint is above I<sub>sc</sub> of the PV device, the PV device operates at ISC until its supply current is able to exceed the setpoint current, at which the load voltage is increasing to keep the current set-point
+- if the setpoint is above I<sub>sc</sub> of the PV device, the PV device operates at I<sub>sc</sub> until its supply current is able to exceed the setpoint current, at which the load voltage is increasing to keep the current set-point
 - since the OPET uses a voltage driven PI-control to regulate the output load, the current load mode is a software implemented load control mode
 - its reaction time is therefore slower and more typical to that of the maximum power point tracking mode dependent on the control options used
 - the current load mode has a configurable "no-adjust-zone" that is around the current set-point, at which the load controller set-point is not adjusted
@@ -54,7 +54,7 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Maximum power point tracking
 - Use `LOAD:MODE 5` to enter maximum power point tracking P<sub>mp</sub> mode
 - Maximum power point P<sub>mp</sub> tracking is realised using a simple hill-climbing algorithm
-- Dependent if power output is decreasing or increasing, the climbing direction is changed or kept
+- Depending on whether power output is decreasing or increasing, the climbing direction is changed or kept
 - The voltage step width is adjustable and variable
     - Before P<sub>mp</sub> is found or if point is lost, the step size is larger/ increasing to reach the point faster
     - when P<sub>mp</sub> is found, the voltage step size is reduced to achieve a better tracking accuracy
@@ -74,10 +74,11 @@ This repository contains everything relating to the firmware of the OPET device 
     - Measure IV curve
     - Reset previous set-point and range conditions
     - Process data
+
 - Current and voltage measurement ranges are only adjusted if the OPET is in auto-range mode, see [Measurement range control](#measurement-range-control) for more details
 - During the IV curve measurement process following is done for each point in order:
     - Voltage reference set-point is transferred
-    - Waiting settling time
+    - Wait for settling time
     - Repeat measure voltage and current dependent on averaging options
     - Measure voltage one last time if asymmetric voltage option enabled
 - Use commands in [IV Curve Tracing Commands](#iv-curve-tracing-commands) to adjust the measurement options
@@ -89,9 +90,9 @@ This repository contains everything relating to the firmware of the OPET device 
         - If XXX is zero, the IV curve measurement internally aborted, usually because the output is disabled
     - Wait at least 20ms (one control loop time cycle, see [Control loop timer multiplier](#control-loop-timer-multiplier))
     - Send `*OPC?` and wait for reply or wait until IV tracing is finished
-        - A response to this command is send right after the IV finishes
+        - A response to this command is sent right after the IV finishes
     - Send `IV:DATA?` to collect the latest IV data
-- the distribution of voltage set-points over the IV curve can be linear with equal point distribution or cosine with more dense voltage point distribution around VOC
+- the distribution of voltage set-points over the IV curve can be linear with equal point distribution or cosine with more dense voltage point distribution around V<sub>oc</sub>
     - see [IV Curve Tracing Commands](#iv-curve-tracing-commands) for command details
     - the cosine phase-angle maximum can be used to tweak the position of the maximum density of points or its point density
         - density near V<sub>oc</sub> when φ is below π/2, the higher the more points around V<sub>oc</sub>
@@ -114,10 +115,10 @@ This repository contains everything relating to the firmware of the OPET device 
     - Settle for \~40ms
     - Set end voltage
     - Measure current at given intervals
-    - Progress data in raw format
+    - Process data in raw format
     - Reset previous load conditions
 - As above, transient is measured twice, once for voltage and once for current
-    - Done do achieve an adjustable measurement resolution down to \~12 µs, comprised of 4 µs conversion time and 8 µs data transfer and processing time
+    - Done to achieve an adjustable measurement resolution down to \~12 µs, comprised of 4 µs conversion time and 8 µs data transfer and processing time
     - would otherwise need \~100 µs to change the input channel on the multiplexer
 - Use commands in [Transient measurement control](#transient-measurement-control) to adjust the measurement options
     - The point delay time given in \[µs\] is a good approximation, but not exact
@@ -129,8 +130,8 @@ This repository contains everything relating to the firmware of the OPET device 
     - set start and end voltage using `LOAD:SETVOLT (voltage)` and `TRANS:ENDVOLT (voltage)`
     - Call `TRANS:MEAS` to start the transient measurement
     - Wait at least \~20ms (one control loop time cycle, see [Control loop timer multiplier](#control-loop-timer-multiplier))
-    - Send `\*OPC?` and wait for reply or wait until measurement is finished
-        - A response to this command is send right after the transient measurement is finished
+    - Send `*OPC?` and wait for reply or wait until measurement is finished
+        - A response to this command is sent right after the transient measurement is finished
     - Send `IV:DATA?` to collect the latest transient data
 
 ## System status and error handling
@@ -145,14 +146,14 @@ This repository contains everything relating to the firmware of the OPET device 
     - The overcurrent error is cleared automatically with the auto-range handling routine that increases the measurement range; in manual range mode it has to be cleared manually
     - If the range is still too low for the current flow, the overcurrent bypass will reactivate again after clearing/resetting
     - The output state is not affected by the overcurrent bypass protection
-    - The current reading is not representative of actual current flow when bypasses is engaged and only shows what is still going through the shunt, while the majority of current is bypassed
+    - The current reading is not representative of actual current flow when bypass is engaged and only shows what is still going through the shunt, while the majority of current is bypassed
     - see [Overcurrent bypass reset](#overcurrent-bypass-reset) for more details
 - the bias voltage error indicator bit enables when the bias voltage goes out of range
     - this error will temporarily disable the output of the OPET, it will still show enabled to indicate that it will come on again, but will not measure IV curves and only set to V<sub>oc</sub> loading
     - once the bias voltage is within range for \~5 s, the output will be activated again
     - the time delayed return to normal operations reduces the stress on the system in case of recurring errors, for example where the voltage output fails above a specific current flow due to an overcurrent dropout off the power supply
     - the bias voltage range can be adjusted, see [Bias Voltage Limits Protection](#bias-voltage-limits-protection) for more details
-- the NTC 1 and NTRC 2 over Temperature errors indicate when the OPET electronics are overheating or its too cold
+- the NTC 1 and NTC 2 over-temperature errors indicate when the OPET electronics are overheating or it's too cold
     - if the temperature is too high or too low and reaches the disconnect threshold, the output will be disabled and at V<sub>oc</sub> loading, IV curve can also not be measured
     - for as long as the temperature is between disconnect and reconnect threshold after a disconnect, the output is off and at V<sub>oc</sub>, but IV curves and transient curves can be measured
     - once the reconnect threshold is reached after cooling down / warming up, the output is re-enabled to the previous control state
@@ -170,7 +171,7 @@ This repository contains everything relating to the firmware of the OPET device 
 
 ## PI-Controller adjustments
 - The driver MOSFET PI-controller on the OPET PCB is actively regulating the voltage at the PV device
-- in case that the PI-controller gain and integration are inadequate for the PV device load and capacitance, the controller can get instable and oscillate
+- in case that the PI-controller gain and integration are inadequate for the PV device load and capacitance, the controller can get unstable and oscillate
     - at this point the current and voltage readings may get very noisy
     - also the shape of the IV curve measurements can be affected
 - due to the wide variety of PV devices with different load capacitances and stray induction, output voltages and currents, it is difficult to optimise the PI-controller to work for all devices at once
@@ -181,12 +182,12 @@ This repository contains everything relating to the firmware of the OPET device 
 - the PI-controller stability is also dependent on the voltage range setting, hence it is advised to check the response throughout the entire PV device IV curve using the manual control mode in auto-range setting, to check the stability of the controller
     - it helps plotting the voltage control value against the PV device measured voltage to determine stability, this should be a linear relationship
     - it also helps using the transient response measurement function to determine stability, a stable response should have at max a single overshoot and should settle quickly
-        - in instable conditions the transient will overshoot significantly and oscillate around the set-point until maybe settling, basically the dampening is too low
+        - in unstable conditions the transient will overshoot significantly and oscillate around the set-point until maybe settling, basically the damping is too low
 - stability should also be checked when the PV device connected is under maximum light conditions, where it has its highest V<sub>oc</sub>, I<sub>sc</sub> and output power
     - the stability should then still be fine under low irradiance conditions
 - when using a high integration capacitor ID value, it is possible that the IV curve does not finish at V<sub>oc</sub>
     - this is due to the reduced response time of the PI controller, which is slowest around V<sub>oc</sub>, where the controller needs to adjust the driver MOSFET voltage more to reduce current flow
-    - in this case it is best to increase the IV-point settling time so that the controller has more time to reach the set-point (see 4.3.4.4)
+    - in this case it is best to increase the IV-point settling time so that the controller has more time to reach the set-point (see [IV point settling time delay in ms](#iv-point-settling-time-delay-in-ms))
 
 ## Auto-Start System
 - in normal configuration the OPET system needs to be controlled by a computer first to enable the output and enter a load mode
@@ -211,10 +212,10 @@ This repository contains everything relating to the firmware of the OPET device 
 - When communicating with many OPET devices on one RS485 bus, it is important that the response time from an OPET is as fast as possible to be able to communicate with as many units in as little time as possible
 - Normal response time of OPET is \~10ms, with the exception after a reset command or during IV and transient measurements
 - This can be lengthened by the USB buffer delay times (latency timers)
-    - Basically the USB buffer waits before actually sending data, especially with small data packages, to see if more data is coming in and then sends it of the RS485 controller
-- In windows, one can access the USB device latency timers using: Device Manager-\>Ports-\>COM Port-\>Port Settings-\>Advanced-\>Latency Timer
+    - Basically the USB buffer waits before actually sending data, especially with small data packages, to see if more data is coming in and then sends it off to the RS485 controller
+- In Windows, one can access the USB device latency timers using: Device Manager-\>Ports-\>COM Port-\>Port Settings-\>Advanced-\>Latency Timer
     - The com port that represents the USB to RS485 controller must be selected
-    - Sorry no idea where that is on Linux or MAC or any other operating system
+    - The location of this setting on Linux or macOS may vary by driver
     - Set the latency times to 1-2 ms
     - the process is a little experimental, but can speed communication up significantly
 
@@ -235,24 +236,24 @@ This repository contains everything relating to the firmware of the OPET device 
 - The `address` is formed by a single character rather than the actual address number
     - This is determined via ASCII starting with `@` (ASCII 64 or 0x40) as address 0 + address of device
     - Hence `@` is address 0, `A` is address 1, `B` is address 2, ..., `\_` (ASCII 95 or 0x5F) is address 31
-- If the command requires a value to be read or does not need a value, the transmission can be terminated directly after the command without sending a value with TAP separator
-- OPET devices, as of yet, do not recognise multiple commands send at the same time
+- If the command requires a value to be read or does not need a value, the transmission can be terminated directly after the command without sending a value with TAB separator
+- OPET devices, as of yet, do not recognise multiple commands sent at the same time
     - This means that only one command can be sent at a time until a response has been received from the device, see details in following section
     - If multiple commands are sent only the first command is likely being processed and communication collisions on the RS485 bus are likely
 - The input buffer of the OPET accepts maximum of 120 characters per command line
     - Sending more characters without a `\n` termination will result in the command being rejected without notification
 
 ### Command response / reply
-- The OPET communication protocol sends a response echo for any command send after it has been processed
-- This can be interpreted at the control software and indicates is the command is understood and transferred correctly, details to the response are given for each command in the following instruction set sections
+- The OPET communication protocol sends a response echo for any command sent after it has been processed
+- This can be interpreted at the control software and indicates if the command is understood and transferred correctly, details to the response are given for each command in the following instruction set sections
 - It is also used to control the command flow
 - The response has the same structure as the send command but without the address at the beginning, it can contain multiple values separated by `\t`
 - If a read access command was given, the command is returned with the requested variable value added to the command separated by `\t`
 - If a write access command was given, the value is first written to the MCU memory and then read-back and returned
-    - In certain circumstances the returned value will be different to what was send:
+    - In certain circumstances the returned value will be different to what was sent:
         - In case it is out of boundaries of the allowed range
-        - In case the give resolution of the value is greater than single float (\~6-7 digits)
-- If a command is not recognized, the device does just returns a question mark `?`
+        - In case the given resolution of the value is greater than single float (\~6-7 digits)
+- If a command is not recognized, the device just returns a question mark `?`
 
 ## Quick reference of Instruction Set
 
@@ -400,7 +401,7 @@ This repository contains everything relating to the firmware of the OPET device 
     - `Vb`: bias supply voltage
     - `NTC1`: temperature of the onboard temperature sensor
     - `NTC2`: temperature of the MOSFET driver temperature sensor
-    - `RTD`: [only if enabled, the temperature reading of the temperature sensor connected]{.mark}
+    - `RTD`: only if enabled, the temperature reading of the temperature sensor connected
 - The internal reference voltage offset `Voff` is a reference signal that should always be the same
     - only drifts with excessive temperature change in the onboard operating temperature
     - an internal zero value ADC count determining zero volts and current, and enabling slightly negative current and voltage measurements on a unipolar ADC reading
@@ -490,7 +491,7 @@ This repository contains everything relating to the firmware of the OPET device 
     - Example reply: `IV:POINTS?\t100\n`
 - This value specifies the number of IV points that are measured for every IV curve and transient measurement curve
 - Minimum is `3` and maximum is `250`
-- If the requested value is out of range, it will be cohered to the minim or maximum value
+- If the requested value is out of range, it will be clamped to the minimum or maximum value
 
 #### IV point settling time delay in ms
 - Write Command: `IV:DELAY\t<value>\n`
@@ -581,8 +582,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Defines the delay time between start of individual voltage or current measurements
 - multiplied with the number of points measured gives the total measurement time
 - This parameter recognises fractional numbers, however a finite resolution is given by the voltage or current point measurement time and delay loop controller cycles
-- The minimum is \~12us for the measurement and \~0.6us per delay cycle[^1]
-[^1]:(check, adjust that)
+- The minimum is \~12µs for the measurement and \~0.6µs per delay cycle
 
 ### Measurement range control
 
@@ -638,7 +638,7 @@ This repository contains everything relating to the firmware of the OPET device 
 	- Example reply: `RANGE:ONVOLT?\t255\n`
 - This command is used to control which ranges can be accessed in auto ranging mode
 	- If a range is disabled for auto range, the next higher enabled range is used instead
-- The range enable byte, send as 8-bit unsigned number in write command, has for each voltage range a corresponding bit, given as follows:
+- The range enable byte, sent as 8-bit unsigned number in write command, has for each voltage range a corresponding bit, given as follows:
 	- Bit 0: 1V range
 	- Bit 1: 4.2V range
 	- Bit 2: 10V range
@@ -654,7 +654,7 @@ This repository contains everything relating to the firmware of the OPET device 
 	- Example reply: `RANGE:ONCURR?\t255\n`
 - This command is used to control which ranges can be accessed in auto ranging mode
 	- If a range is disabled for auto range, the next higher enabled range is used instead
-- The range enable byte, send as 8bit unsigned number in write command, has for each current range a corresponding bit, given as follows:
+- The range enable byte, sent as 8-bit unsigned number in write command, has for each current range a corresponding bit, given as follows:
 	- Bit 0: 1.07mA or 50mA range
 	- Bit 1: 3.2mA or 150mA range
 	- Bit 2: 11mA or 500mA range
@@ -729,7 +729,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `DRIV:IDGAIN?\n`
     - Example reply: `DRIV:IDGAIN?\t1\n`
 - This controls the proportional gain of the driver PI controller
-- Gain resistor ID values from 0 to 3 are valid, if the value is outside of those bounds will be cohered to the minim or maximum value
+- Gain resistor ID values from 0 to 3 are valid, if the value is outside of those bounds it will be clamped to the minimum or maximum value
 - With increasing ID value, the proportional gain is reducing, which is in most cases increases the driver stability
 - Adjust this value to stabilize driver regulation in case of oscillations and to optimise voltage control step response
 
@@ -738,7 +738,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `DRIV:IDINT?\n`
     - Example reply: `DRIV:IDINT?\t1\n`
 - This controls the integrator capacitor of the driver PI controller
-- Integrator capacitor ID values from 0 to 3 are valid, if the value is outside of those bounds will be cohered to the minim or maximum value
+- Integrator capacitor ID values from 0 to 3 are valid, if the value is outside of those bounds it will be clamped to the minimum or maximum value
 - With increasing ID value, the integrator capacitor is increasing, this reduces the response time of the driver and is in most cases increasing the driver stability
 - Adjust this value to stabilize driver regulation in case of oscillations and to optimise voltage control step response
 
@@ -749,7 +749,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `ADC:AVR:VC?\n`
     - Example reply: `ADC:AVR:VC?\t1\n`
 - This command controls how many consecutive current and voltage load measurements are taken and averaged at each measurement cycle (does not impact IV data point averaging)
-- The value can range from `1` to `255` and is cohered to minimum or maximum if out of range
+- The value can range from `1` to `255` and is clamped to the minimum or maximum if out of range
 - This can be used to greatly reduce the measurement fluctuations due to noise
 - When controlling this value, it is important to make sure the value is not too high to cause measurement cycle skipping, which happens, if the device is not "idle" before the measurement cycle time trigger is given
 
@@ -758,15 +758,15 @@ This repository contains everything relating to the firmware of the OPET device 
 - Read Command: `ADC:AVR:OTHER?\n`
     - Example reply: `ADC:AVR:OTHER?\t1\n`
 - This command controls how many consecutive measurements of all other channels are taken and averaged at each measurement cycle
-- The value can range from `1` to `255` and is cohered to minimum or maximum if out of range
+- The value can range from `1` to `255` and is clamped to the minimum or maximum if out of range
 - When controlling this value, it is important to make sure the value is not too high to cause measurement cycle skipping, which happens, if the device is not "idle" before the measurement cycle time trigger is given
 
 #### Number of Voltage and Current cycles averaged
 - Write Command: `ADC:CYCLES:VC\t<count>\n`
 - Read Command: `ADC:CYCLES:VC?\n`
     - Example reply: `ADC:CYCLES:VC?\t1\n`
-- This command controls how many measurements over consecutive cycles are averaged in an continues stream for voltage and current only
-- The value can range from `1` to `100` and is cohered to minimum or maximum if out of range
+- This command controls how many measurements over consecutive cycles are averaged in a continuous stream for voltage and current only
+- The value can range from `1` to `100` and is clamped to the minimum or maximum if out of range
 - Since this function averages over multiple measurement cycles at specific time intervals, this function can be used to reduce low frequency noise from power lines
     - For best performance average over 1 or more full power line cycles
     - OPETs default measurement cycle period 4.167ms, 4 times over one power cycle
@@ -822,8 +822,8 @@ This repository contains everything relating to the firmware of the OPET device 
 |     20      | Range control status                          | uint_8         |
 |     21      | Manual voltage Range ID                       | uint_8         |
 |     22      | Manual current Range ID                       | uint_8         |
-|     23      | Voltage range switching freq. counter         | unit_16        |
-|     24      | Current range switching freq. counter         | unit_16        |
+|     23      | Voltage range switching freq. counter         | uint_16        |
+|     24      | Current range switching freq. counter         | uint_16        |
 |     25      | Volt R1 A0                                    | single float   |
 |     26      | Volt R1 A1                                    | single float   |
 |     27      | Volt R1 Range Val                             | single float   |
@@ -891,7 +891,7 @@ This repository contains everything relating to the firmware of the OPET device 
 |     131     | NTC 2 High Temp Disconnect                    | single float   |
 |     132     | NTC 2 Low Temp Reconnect                      | single float   |
 |     133     | NTC 2 High Temp Reconnect                     | single float   |
-|     135     | Bias Volage Range Minimum                     | single float   |
+|     135     | Bias Voltage Range Minimum                    | single float   |
 |     136     | Bias Voltage Range Maximum                    | single float   |
 |     140     | Number of IV points                           | uint_8         |
 |     141     | IV tracing mode                               | uint_8         |
@@ -922,16 +922,16 @@ This repository contains everything relating to the firmware of the OPET device 
 |     179     | Fan NTC 2 Temp Off                            | single float   |
 |     180     | Fan Power On                                  | single float   |
 |     181     | Fan Power Off                                 | single float   |
-|182|Fan Switch Frequency Counter|uint_16|            |                                               |                |
+|     182     | Fan Switch Frequency Counter                  | uint_16        |
 
 ## Detailed Address Definitions
 - Default values are loaded if the EEPROM is not valid
-- Standard values are the from software revision REV1.04 of the EEPROM after programming
+- Standard values are from software revision REV1.04 of the EEPROM after programming
 
 ### EEPROM Valid
 - Register ID: `0`, default value `165`
 - Must have the value `165` written to it for the OPET device to read the config from EEPROM
-- Used to make sure that a OPET device without programmed EEPROM is not reading an invalid configuration
+- Used to make sure that an OPET device without programmed EEPROM is not reading an invalid configuration
 - At any other value the default configuration will be loaded, which has no calibration factors (i.e. works in and returns raw counts for signals)
     - May be useful for debugging purposes
 
@@ -1075,8 +1075,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
     - thus limits the frequency of range setting to reduce oscillation between ranges in non-ideal operation conditions, such as instability
     - increasing the range value is not prohibited, to make sure a valid reading can always be provided, albeit it may not be at the ideal range
 - with the above standard EEPROM settings a value of 200 results in a delay time of \~0.83s
-- setting this parameter to `0` disables the functionality
-- setting this parameter to <0> disables the functionality, however voltage range control does wear out the mechanical relay slowly, so limiting switching can save the relay especially in conditions where the PI controller is instable at which point the current fluctuates fast
+- setting this parameter to `0` disables the functionality, however voltage range control does wear out the mechanical relay slowly, so limiting switching can save the relay especially in conditions where the PI controller is unstable at which point the current fluctuates fast
 
 #### Current range switching frequency counter
 - Register ID: `24`,
@@ -1085,7 +1084,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - This parameter controls how frequently the current measurement range can be lowered in auto range mode; it works same as the above voltage range switching frequency counter
     - Important difference is that the current range switch also controls mechanical latching relays, that if the frequency is too high, can wear out quite quickly
 - with the above standard EEPROM settings a value of 200 results in a delay time of \~0.83s
-- setting this parameter to `0` disables the functionality, however current range control does wear out the mechanical relay slowly, so limiting switching can save the relay especially in conditions where the PI controller is instable at which point the current fluctuates fast
+- setting this parameter to `0` disables the functionality, however current range control does wear out the mechanical relay slowly, so limiting switching can save the relay especially in conditions where the PI controller is unstable at which point the current fluctuates fast
 
 #### Voltage range switching delay counter
 - Register ID: `85`
@@ -1292,9 +1291,9 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Value: default NTC1 `40.0`, NTC2 `80.0`; standard NTC1 `45.0`, NTC2 `80.0`
 - Value Range: `single floating point`
 - This is the automatic disconnect (switch off) temperature at high NTC1 and NTC2 temperature
-- IMPORTANT: the NCT temperature measured on the heatsink especially for NTC2 at the driver MOSFET does only measure the outer heatsink temperature and not the core MOSFET junction temperature.
+- IMPORTANT: the NTC temperature measured on the heatsink especially for NTC2 at the driver MOSFET does only measure the outer heatsink temperature and not the core MOSFET junction temperature.
     - Example for low current devices: NTC2 measures 80°C, the MOSFET junction is \~130°C
-    - Hence do NOT set the temperate too high, as it may cause immediate damage or reduce lifetime of the MOSFET
+    - Hence do NOT set the temperature too high, as it may cause immediate damage or reduce lifetime of the MOSFET
 
 #### Low temperature reconnect
 - Register ID: NTC1 `127`, NTC2 `132`
@@ -1418,7 +1417,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Parameters is scaled in ADC counts, meaning it scales automatically with changing voltage and current ranges, this parameter is also squared internally to make up the full range of power noise (current \* voltage noise)
 - The signal noise tolerance value determines over which range the MPPT tracer "ignores" new power measurements and continues moving the same direction and step size until the noise tolerance threshold range is either exceeded or succeeded and then decides again based on the resulting new power value
     - Basically, a no adjust range
-- This parameter is designed the reduce the chance of the MPPT tracer getting stuck in noisy environments
+- This parameter is designed to reduce the chance of the MPPT tracer getting stuck in noisy environments
 - A large value results in the MPPT wandering around the P<sub>MAX</sub> point continuously
 - A too low value may result in the tracker not tracking around the exact P<sub>MAX</sub>.
 
@@ -1465,8 +1464,8 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - Parameters is scaled in ADC counts, meaning it scales automatically with changing current range
 - The current signal noise tolerance value determines the current set-point tolerance
 - If the current set-point is reached within the given tolerance, the current-tracer will stop updating the reference voltage on the DAC until it goes out of tolerance again
-- This parameter is designed the reduce the number of DAC control updates
-- A large value result in inaccurate current tracing
+- This parameter is designed to reduce the number of DAC control updates
+- A large value results in inaccurate current tracing
 - A too low value should not have a negative impact, but means the apparent noise on voltage and current caused by constant voltage set-point updates is larger
 
 ### Auto-Start Load configuration
@@ -1621,4 +1620,4 @@ If you just wish to load the stock firmware package, proceed to the MCU programm
 
 # Disclaimer
 
-DISCLAIMER: NREL/ALLIANCE FOR SUSTAINABLE ENERGY, LLC/DOE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING THE WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, AND MAKES NO WARRANTY AS TO THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY INFORMATION PROVIDED HEREIN. USE OF THIS PACKAGE IS AT THE USER’S OWN RISK.
+DISCLAIMER: NLR/ALLIANCE FOR ENERGY INNOVATION, LLC/DOE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING THE WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, AND MAKES NO WARRANTY AS TO THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY INFORMATION PROVIDED HEREIN. USE OF THIS PACKAGE IS AT THE USER’S OWN RISK.
