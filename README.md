@@ -9,8 +9,8 @@ This repository contains everything relating to the firmware of the OPET device 
 ## PV device load functions
 - The main application of OPET is long term performance measurements of PV devices in field or under controlled environmental conditions
 - device performance degradation can be impacted by operation point, hence different load functions have been implemented
-- the load mode is controlled with the `LOAD:MODE (N)` command, see also [Load Control Commands](#load-control-commands)
-    - \(N\) is the desired operation mode ID as detailed in the following sections
+- the load mode is controlled with the `LOAD:MODE <N>` command, see also [Load Control Commands](#load-control-commands)
+    - `<N>` is the desired operation mode ID as detailed in the following sections
     - set the load mode before switching the output on after first boot-up, as the standard EEPROM load mode at boot-up is "0 - none" and the output cannot be enabled
         - see AutoStart function in [Auto-Start System](#auto-start-system) to change this behaviour
 - use the `OUTP 1` or `OUTP 0` commands to enable or disable the output
@@ -88,7 +88,7 @@ This repository contains everything relating to the firmware of the OPET device 
         - This can be used to optimise a timeout function in program flow
         - If XXX is zero, the IV curve measurement internally aborted, usually because the output is disabled
     - Wait at least 20ms (one control loop time cycle, see [Control loop timer multiplier](#control-loop-timer-multiplier))
-    - Send `\*OPC?` and wait for reply or wait until IV tracing is finished
+    - Send `*OPC?` and wait for reply or wait until IV tracing is finished
         - A response to this command is send right after the IV finishes
     - Send `IV:DATA?` to collect the latest IV data
 - the distribution of voltage set-points over the IV curve can be linear with equal point distribution or cosine with more dense voltage point distribution around VOC
@@ -200,7 +200,7 @@ This repository contains everything relating to the firmware of the OPET device 
 
 ### Serial communication settings
 - The RS485 bus uses following software communication settings:
-    - Baud rate: 250 000
+    - Baud rate: 200 000
     - Data bits: 8
     - Stop bits: 1
     - Parity: None
@@ -220,17 +220,17 @@ This repository contains everything relating to the firmware of the OPET device 
 
 ### Basic command structure and addressing 
 - The following basic command structure is used:
-    - Write access: `address`#`command`\[TAB\]`value`\[LF\]
-        - Example Reply: `command`\[TAB\]`value`\[LF\]
-    - Read access: `address`#`command`\[?\]\[LF\]
-        - Example Reply: `command`\[?\]\[TAB\]`value`\[LF\]
-    - `address` is the address of the OPET to communicate to
-    - \# is the address separator (ASCII 0x23)
-    - `command` is the actual command
-    - \[TAB\] (tabulator) is the command and value separator (ASCII 9 or 0x09)
-    - `value` is the control value, number / text
-    - \[LF\] (line feed) is the transmission termination character (ASCII 10 or 0x0A)
-    - `?` is used for read access without extra value and ends directly with \[LF\]
+    - Write access: `<address>#<command>\t<value>\n`
+        - Example Reply: `<command>\t<value>\n`
+    - Read access: `<address>#<command>?\n`
+        - Example Reply: `<command>?\t<value>\n`
+    - `<address>` is the address of the OPET to communicate to
+    - `#` is the address separator (ASCII 0x23)
+    - `<command>` is the actual command
+    - `\t` (tabulator) is the command and value separator (ASCII 9 or 0x09)
+    - `<value>` is the control value, number / text
+    - `\n` (line feed) is the transmission termination character (ASCII 10 or 0x0A)
+    - `?` is used for read access without extra value and ends directly with `\n`
     - Commands are case sensitive / all in upper case
 - The `address` is formed by a single character rather than the actual address number
     - This is determined via ASCII starting with `@` (ASCII 64 or 0x40) as address 0 + address of device
@@ -240,14 +240,14 @@ This repository contains everything relating to the firmware of the OPET device 
     - This means that only one command can be sent at a time until a response has been received from the device, see details in following section
     - If multiple commands are sent only the first command is likely being processed and communication collisions on the RS485 bus are likely
 - The input buffer of the OPET accepts maximum of 120 characters per command line
-    - Sending more characters without a \[LF\] termination will result in the command being rejected without notification
+    - Sending more characters without a `\n` termination will result in the command being rejected without notification
 
 ### Command response / reply
 - The OPET communication protocol sends a response echo for any command send after it has been processed
 - This can be interpreted at the control software and indicates is the command is understood and transferred correctly, details to the response are given for each command in the following instruction set sections
 - It is also used to control the command flow
-- The response has the same structure as the send command but without the address at the beginning, it can contain multiple values separated by \[TAB\]
-- If a read access command was given, the command is returned with the requested variable value added to the command separated by \[TAB\]
+- The response has the same structure as the send command but without the address at the beginning, it can contain multiple values separated by `\t`
+- If a read access command was given, the command is returned with the requested variable value added to the command separated by `\t`
 - If a write access command was given, the value is first written to the MCU memory and then read-back and returned
     - In certain circumstances the returned value will be different to what was send:
         - In case it is out of boundaries of the allowed range
@@ -279,7 +279,7 @@ This repository contains everything relating to the firmware of the OPET device 
 | `IV:AVR:VC`        | Controls number measurements averaged per set per point          |
 | `IV:AVR:SETS`      | Controls number measurement sets averaged per point              |
 | `IV:MODE`          | Sets the IV tracing mode / control options                       |
-| `IV:PHASE`         | Controls the maximum phase angle of cosine distributed IV points |
+| `IV:COS:PHASE`     | Controls the maximum phase angle of cosine distributed IV points |
 | `IV:VOC:MULT`      | Voc measurement multiplier of IV control end voltage             |
 |                    | **Transient Measurement**                                        |
 | `TRANS:MEAS`       | Initiates a transient measurement                                |
@@ -316,8 +316,8 @@ This repository contains everything relating to the firmware of the OPET device 
 ### System commands
 
 #### Read System Status Byte
-- Command: `\*SBR?`
-- Example reply: \*SBR? \[TAB\] 1 \[LF\]
+- Command: `*SBR?`
+- Example reply: `*SBR?\t1\n`
 - This is a read only command and it returns the main status byte of the OPET device
 - Each bit has following meaning, false is inactive, true is active:
     - Bit 0: Output enabled
@@ -365,20 +365,20 @@ This repository contains everything relating to the firmware of the OPET device 
 
 
 #### Operation Complete Query
-- Command: `\*OPC?`
-- Example reply: \*OPC? \[TAB\] 1 \[LF\]
+- Command: `*OPC?`
+- Example reply: `1\n`
 - This is a read only command, a reply is sent only if the device is ready and "idle" in load control mode or Off mode, after for example measuring an IV curve
 - Use to check if an IV-curve or transient measurement is finished
 
 #### Identify
-- Command: `\*IDN?`
-- Example reply: \*IDN? \[TAB\] OPET_R1.3 \[TAB\] R0.50-01/08/2021 \[TAB\] Not Sure! \[LF\]
+- Command: `*IDN?`
+- Example reply: `*IDN?\tOPET_R1.3\tR0.50-01/08/2021\tNot Sure!\n`
 - a read only command, that returns the device name with hardware revision, the firmware version with date and the board identifier as specified in EEPROM
-- all separated by \[TAB\]
+- all separated by `\t`
 
 #### Reset
-- Command: `\*RST`
-- Example reply: \*RST \[TAB\] 1 \[LF\]
+- Command: `*RST`
+- Example reply: `*RST\t1\n`
 - A write only command that does not require a specific value
 - The OPET device sends the reply and then immediately after triggers a software reset and returns to the state as specified in the EEPROM
 - Use this command to reset the device after the EEPROM is written or after calibrating to refresh the internal memory with the new permanently stored values
@@ -387,7 +387,7 @@ This repository contains everything relating to the firmware of the OPET device 
 
 #### Read status and output measurements
 - Command: `READ?`
-- Example reply: READ? \[TAB\] `SBR` \[TAB\] `Vpv` \[TAB\] `Cpv` \[TAB\] `Voff` \[TAB\] `Vb` \[TAB\] `NTC1` \[TAB\] `NTC2` \[TAB\] `RTD` \[LF\]
+- Example reply: `READ?\t<SBR>\t<Vpv>\t<Cpv>\t<Voff>\t<Vb>\t<NTC1>\t<NTC2>\t<RTD>\n`
 - read only command that returns the latest ADC input readings and the system status byte
     - it does not initiate a new ADC reading, just returns the last reading results
     - readings are taken all the time with every measurement trigger, if requested or not
@@ -410,10 +410,10 @@ This repository contains everything relating to the firmware of the OPET device 
     - The reference voltage can change significantly with current load on the PV module
 
 #### Output enable/ disable
-- Write Command: `OUTP` \[TAB\] `value` \[LF\]
+- Write Command: `OUTP\t<value>\n`
     - `0` -- to disable the output, `1` -- to enable the output
-- Read Command: `OUTP?` \[LF\]
-    - Example reply: OUTP? \[TAB\] 1 \[LF\]
+- Read Command: `OUTP?\n`
+    - Example reply: `OUTP?\t1\n`
 - Read write access to switch on/off the load control output
     - in off-state the MOSFET driver is forced into high resistance state
     - in on-state the driver controls the desired output load of the PV device
@@ -421,8 +421,8 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Load Control Commands
 
 #### Load Mode control
-- Write Command: `LOAD:MODE` \[TAB\] \[mode value\] \[LF\]
-- Read Command: `LOAD:MODE?` \[LF\]
+- Write Command: `LOAD:MODE\t<mode>\n`
+- Read Command: `LOAD:MODE?\n`
 	    - Example reply: `LOAD:MODE?\t1\n`
 - Controls the PV device load mode
 - Following values are valid:
@@ -434,22 +434,22 @@ This repository contains everything relating to the firmware of the OPET device 
     - `5` MPPT -- maximum power point tracker
 
 #### Voltage Set-Point
-- Write Command: `LOAD:SETVOLT` \[TAB\] `voltage value` \[LF\]
-- Read Command: `LOAD:SETVOLT?` \[LF\]
-    - Example reply: LOAD:SETVOLT? \[TAB\] 1.2 \[LF\]
+- Write Command: `LOAD:SETVOLT\t<voltage>\n`
+- Read Command: `LOAD:SETVOLT?\n`
+    - Example reply: `LOAD:SETVOLT?\t1.2\n`
 - Voltage set-point value in volts can be anything, but must be positive, if the set-point is too high and cannot be reached, the system will operate at Voc
 - This set-point is used when in constant voltage mode and as the static start value during voltage transient measurements (see [Transient measurement control](#transient-measurement-control))
 
 #### Current Set-Point
-- Write Command: `LOAD:SETCURR` \[TAB\] `current value` \[LF\]
-- Read Command: `LOAD:SETCURR?` \[LF\]
-    - Example reply: LOAD:SETCURR? \[TAB\] 1.2 \[LF\]
+- Write Command: `LOAD:SETCURR\t<current>\n`
+- Read Command: `LOAD:SETCURR?\n`
+    - Example reply: `LOAD:SETCURR?\t1.2\n`
 - Current set-point value in amperes can be anything, but must be positive, if the set-point is to high and cannot be reached, the system will operate at Isc
 
 #### MPPT update delay
-- Write Command: `LOAD:MPPT:DELAY\t` \[TAB\] `number cycles` \[LF\]
-- Read Command: `LOAD:MPPT:DELAY?` \[LF\]
-    - Example reply: LOAD:MPPT:DELAY? \[TAB\] 1 \[LF\]
+- Write Command: `LOAD:MPPT:DELAY\t<cycles>\n`
+- Read Command: `LOAD:MPPT:DELAY?\n`
+    - Example reply: `LOAD:MPPT:DELAY?\t1\n`
 - the MPPT update delay determines how often the MPPT tracer updates the output, it is given in number of internal OPET control cycles
     - the minimum is 1, meaning the MPPT is updated every control cycle
     - the maximum is 60000, meaning the MPPT waits 60000 cycles before updating again
@@ -459,18 +459,18 @@ This repository contains everything relating to the firmware of the OPET device 
 ### IV Curve Tracing Commands
 
 #### Start IV curve measurement
-- Write only Command: `IV:MEAS` \[LF\]
-    - Example reply: IV:MEAS \[TAB\] 900 \[LF\]
+- Write only Command: `IV:MEAS\n`
+    - Example reply: `IV:MEAS\t900\n`
 - This command will initiate the start of and IV curve measurement, no value needed
 - The return value is the expected total IV measurement time in milliseconds including I<sub>sc</sub> and V<sub>oc</sub> pre-measurements
     - If active error found or the output is off, `0` is returned and measurement is not started
 
 #### Read IV curve Data
-- Read only command: `IV:DATA?` \[LF\]
+- Read only command: `IV:DATA?\n`
 - This function returns the last measured IV curve or transient data
     - IV curve and transient measurement share the same buffer on the micro controller
     - calling this function multiple times will return the same data unless a new measurement is taken in-between
-- Example reply: IV:DATA? \[TAB\] `IVSB` \[TAB\] `V1` \[TAB\] `C1` \[TAB\] ... \[TAB\] `VN` \[TAB\] `CN` \[LF\]
+- Example reply: `IV:DATA?\t<IVSB>\t<V1>\t<C1>\t...\t<VN>\t<CN>\n`
 - `IVSB`, the first parameter given is the IV curve measurement status byte
     - In principle, as long as its `0` the IV curve measurement was a success
     - has following bit definitions:
@@ -485,25 +485,25 @@ This repository contains everything relating to the firmware of the OPET device 
 - After the status byte, the voltage `VN` and current `CN` points are given for the entire IV curve, while N represents the point ID up to the configured number of IV points
 
 #### Number of IV Points
-- Write Command: `IV:POINTS` \[TAB\] `value` \[LF\]
-- Read Command: `IV:POINTS?` \[LF\]
-    - Example reply: IV:POINTS? \[TAB\] 100 \[LF\]
+- Write Command: `IV:POINTS\t<value>\n`
+- Read Command: `IV:POINTS?\n`
+    - Example reply: `IV:POINTS?\t100\n`
 - This value specifies the number of IV points that are measured for every IV curve and transient measurement curve
 - Minimum is `3` and maximum is `250`
 - If the requested value is out of range, it will be cohered to the minim or maximum value
 
 #### IV point settling time delay in ms
-- Write Command: `IV:DELAY` \[TAB\] `value` \[LF\]
-- Read Command: `IV:DELAY?` \[LF\]
-    - Example reply: IV:DELAY? \[TAB\] 1 \[LF\]
+- Write Command: `IV:DELAY\t<value>\n`
+- Read Command: `IV:DELAY?\n`
+    - Example reply: `IV:DELAY?\t1\n`
 - This specifies the time delay in milliseconds between setting the voltage of the PV device and start of measuring the voltage and current point
 - value range accepted is between `1` and `60000` \[ms\], number fractions are ignored
 - Default value would be 5-10 ms for normally responding PV devices
 
 #### IV data Averaging control
 - Commands:
-    - Number Voltage and current averages per set: `IV:AVR:VC` \[TAB\] `value` \[LF\]
-    - Number of averaging sets: `IV:AVR:SETS` \[TAB\] `value` \[LF\]
+    - Number Voltage and current averages per set: `IV:AVR:VC\t<value>\n`
+    - Number of averaging sets: `IV:AVR:SETS\t<value>\n`
 - Both commands support read-write functions
 - `IV:AVR:VC` controls the number of measurements that are averaged in one set
     - voltage is N times measured and then current is N times measured to form one set
@@ -517,9 +517,9 @@ This repository contains everything relating to the firmware of the OPET device 
 - both settings allow integer numbers between `1` and `255`
 
 #### IV measurement mode
-- Write Command: `IV:MODE` \[TAB\] `mode byte` \[LF\]
-- Read Command: `IV:MODE?` \[LF\]
-    - Example reply: IV:MODE? \[TAB\] 3 \[LF\]
+- Write Command: `IV:MODE\t<mode byte>\n`
+- Read Command: `IV:MODE?\n`
+    - Example reply: `IV:MODE?\t3\n`
 - The IV mode control byte allows changing the methodology of the IV curve measurement
 - Following bit definitions are available:
     - Bit 0: Cosine IV point distribution
@@ -537,9 +537,9 @@ This repository contains everything relating to the firmware of the OPET device 
     - Bit 7: none
 
 #### Cosine maximum phase in radians
-- Write Command: `IV:PHASE` \[TAB\] `phase in radians` \[LF\]
-- Read Command: `IV:PHASE?` \[LF\]
-    - Example reply: IV:PHASE? \[TAB\] 1.57 \[LF\]
+- Write Command: `IV:COS:PHASE\t<phase>\n`
+- Read Command: `IV:COS:PHASE?\n`
+    - Example reply: `IV:COS:PHASE?\t1.57\n`
 - This parameter defines the maximum phase angle used for the nonlinear cosine point distribution
 - It effectively controls where the maximum point distribution is
 - Default is 1.57 or π/2, any value can be used here, but values below 1 or values larger than π may result in unexpected performance
@@ -547,9 +547,9 @@ This repository contains everything relating to the firmware of the OPET device 
 - If a value between π/2 and π is used, the highest point density moves towards MPPT with increasing value and at V<sub>oc</sub> the point density reduces again
 
 #### VOC overshoot control multiplier
-- Write Command: `IV:VOC:MULT` \[TAB\] `multiplier` \[LF\]
-- Read Command: `IV:VOC:MULT?` \[LF\]
-    - Example reply: IV:VOC:MULT? \[TAB\] 1.01 \[LF\]
+- Write Command: `IV:VOC:MULT\t<multiplier>\n`
+- Read Command: `IV:VOC:MULT?\n`
+    - Example reply: `IV:VOC:MULT?\t1.01\n`
 - Before any IV measurements, the I<sub>sc</sub> and V<sub>oc</sub> of the IV curve are measured for controlling the measurement input ranges and the voltage tracing control range
 - This value determines the extra factor that is applied to the V<sub>oc</sub> measurement to calculate the voltage point distribution of the IV curve
 - If the value is above 1, the control voltage will go above V<sub>oc</sub> which effectively leads to a few points of the IV curve being measured at V<sub>oc</sub>
@@ -559,25 +559,25 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Transient measurement control
 
 #### Start transient measurement
-- Write only Command: `TRANS:MEAS` \[LF\]
-- Example reply: TRANS:MEAS \[TAB\] 1 \[LF\]
+- Write only Command: `TRANS:MEAS\n`
+- Example reply: `TRANS:MEAS\t<XXX>\n`
 - This command will initiate the start of a transient measurement, no value needed
 - The transient measurement data is collected using the `IV:DATA?` command
-- It will return `1` if there is no active error that prohibits transient measurements
-    - If active error found `0` is returned and measurement is not started
+- The return value is the estimated total transient measurement time in milliseconds
+    - If active error found or the output is off, `0` is returned and measurement is not started
 
 #### Transient end voltage
-- Write Command: `TRANS:ENDVOLT` \[TAB\] `voltage in V` \[LF\]
-- Read Command: `TRANS:ENDVOLT?` \[LF\]
-    - Example reply: TRANS:ENDVOLT? \[TAB\] 1.01 \[LF\]
+- Write Command: `TRANS:ENDVOLT\t<voltage>\n`
+- Read Command: `TRANS:ENDVOLT?\n`
+    - Example reply: `TRANS:ENDVOLT?\t1.01\n`
 - The parameter defines the transient end set-point voltage
 - The start point is defined by the voltage load control set-point see [Voltage Set-Point](#voltage-set-point)
 
 #### Transient point delay in us 
-- Write Command: `TRANS:DELAY` \[TAB\] `delay in microseconds` \[LF\]
-    - Example reply TRANS:DELAY \[TAB\] 10.1 \[LF\]
-- Read Command: `TRANS:DELAY?` \[LF\]
-    - Example reply: TRANS:DELAY? \[TAB\] 1.01 \[LF\]
+- Write Command: `TRANS:DELAY\t<delay_us>\n`
+    - Example reply: `TRANS:DELAY\t10.1\n`
+- Read Command: `TRANS:DELAY?\n`
+    - Example reply: `TRANS:DELAY?\t1.01\n`
 - Defines the delay time between start of individual voltage or current measurements
 - multiplied with the number of points measured gives the total measurement time
 - This parameter recognises fractional numbers, however a finite resolution is given by the voltage or current point measurement time and delay loop controller cycles
@@ -587,17 +587,17 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Measurement range control
 
 #### Read active measurement range value
-- Read only command: `RANGE:ACTVAL?` \[LF\]
-    - Example reply: RANGE:ACTVAL? \[TAB\] `Voltage range in V` \[TAB} `Current range in A` \[LF\]
+- Read only command: `RANGE:ACTVAL?\n`
+    - Example reply: `RANGE:ACTVAL\t<Voltage range in V>\t<Current range in A>\n`
 - This read only command returns the active measurement ranges for voltage and current in volts and amperes as absolute values rather than an ID definition that is more difficult to recognise
 - The current range values returned here may be different to the actual range size
     - i.e. a 320mA range is returned for a 340mA range
     - this is an adjustment made to improve the calibration, as the calibrator will lower range and achieve a higher total calibration accuracy at 320mA instead of 340mA
 
 #### Voltage Range ID
-- Write Command: `RANGE:IDVOLT` \[TAB\] `voltage range ID` \[LF\]
-- Read Command: `RANGE:IDVOLT?` \[LF\]
-    - Example reply: RANGE:IDVOLT? \[TAB\] auto \[LF\]
+- Write Command: `RANGE:IDVOLT\t<range ID>\n`
+- Read Command: `RANGE:IDVOLT?\n`
+    - Example reply: `RANGE:IDVOLT?\tauto\n`
 - This is used to manually control the voltage measurement range or to set it to auto ranging
 - Following ranges are available:
     - `0` - 1V range
@@ -609,9 +609,9 @@ This repository contains everything relating to the firmware of the OPET device 
 - Reading this value does return "auto" in auto-range mode to indicate that its auto-ranging
 
 #### Current Range ID
-- Write Command: `RANGE:IDCURR` \[TAB\] `current range ID` \[LF\]
-- Read Command: `RANGE:IDCURR?` \[LF\]
-    - Example reply: RANGE:IDCURR? \[TAB\] auto \[LF\]
+- Write Command: `RANGE:IDCURR\t<range ID>\n`
+- Read Command: `RANGE:IDCURR?\n`
+    - Example reply: `RANGE:IDCURR?\tauto\n`
 - This command is used to manually control the current measurement range or to set it to auto ranging
 - Following ranges are available (depending on the current rating of the OPET version):
     - `0` - 1.07mA or 50mA range
@@ -624,8 +624,8 @@ This repository contains everything relating to the firmware of the OPET device 
 - Reading this value does return "auto" in auto-range mode to indicate that its auto-ranging
 
 #### Overcurrent bypass reset
-- Write Only Command: `RANGE:OCRST` \[LF\]
-    - Example reply RANGE:OCRST \[TAB\] 1 \[LF\]
+- Write Only Command: `RANGE:OCRST\n`
+    - Example reply: `RANGE:OCRST\t1\n`
 - This write only command does not require a value and manually resets the overcurrent bypass control of the OPET, which is used to protect the shunt resistors from over-voltage and over-heating
 - In current auto-range mode this is done automatically after switching to a higher current range
 - In manual mode it is advised to switch manually to a higher range before resetting the bypass unless it is known that the overcurrent is removed
@@ -633,9 +633,9 @@ This repository contains everything relating to the firmware of the OPET device 
 - The bypass activates within \~100 milliseconds of detecting overcurrent independently of the microcontroller and hence can be triggered by short current spikes
 
 #### Control voltage ranges to be used in auto range mode
-- Write Command: `RANGE:ONVOLT`\[TAB\]\<range enabled byte\>\[LF\]
-- Read Command: `RANGE:ONVOLT?`\[LF\]
-	- Example reply: RANGE:ONVOLT? \[TAB\] 255 \[LF\]
+- Write Command: `RANGE:ONVOLT\t<range enabled byte>\n`
+- Read Command: `RANGE:ONVOLT?\n`
+	- Example reply: `RANGE:ONVOLT?\t255\n`
 - This command is used to control which ranges can be accessed in auto ranging mode
 	- If a range is disabled for auto range, the next higher enabled range is used instead
 - The range enable byte, send as 8-bit unsigned number in write command, has for each voltage range a corresponding bit, given as follows:
@@ -649,8 +649,8 @@ This repository contains everything relating to the firmware of the OPET device 
 - The highest voltage range can not be disabled, as it is the default range in “off mode”
 
 #### Control current ranges to be used in auto range mode
-- Write Command: `RANGE:ONCURR` \[TAB\] \<range enabled byte\> \[LF\]
-- Read Command: `RANGE:ONCURR?`\[LF\]
+- Write Command: `RANGE:ONCURR\t<range enabled byte>\n`
+- Read Command: `RANGE:ONCURR?\n`
 	- Example reply: `RANGE:ONCURR?\t255\n`
 - This command is used to control which ranges can be accessed in auto ranging mode
 	- If a range is disabled for auto range, the next higher enabled range is used instead
@@ -670,9 +670,9 @@ This repository contains everything relating to the firmware of the OPET device 
 - For specific calibration procedure details, please refer to [Basic 2-point calibration](#basic-2-point-calibration)
 
 #### Calibration Mode Control
-- Write Command: `RANGE:CAL:MODE` \[TAB\] `mode type` \[LF\]
-- Read Command: `RANGE:CAL:MODE?` \[LF\]
-    - Example reply: RANGE:CAL:MODE? \[TAB\] CURR \[LF\]
+- Write Command: `RANGE:CAL:MODE\t<mode type>\n`
+- Read Command: `RANGE:CAL:MODE?\n`
+    - Example reply: `RANGE:CAL:MODE?\tCURR\n`
 - This command is used to enter and exit the calibration mode of the OPET ADC system
 - Calibration mode restricts the output to OFF only
 - The Mode types that can be selected are following:
@@ -684,18 +684,18 @@ This repository contains everything relating to the firmware of the OPET device 
     - only the calibration scale and offset are set to 1 and 0 respectively
 
 #### Set Range Scale Value
-- Write Command: `RANGE:CAL:SCALE` \[TAB\] `value` \[LF\]
-- Read Command: `RANGE:CAL:SCALE?` \[LF\]
-    - Example reply: RANGE:CAL:SCALE? \[TAB\] 1.2032 \[LF\]
+- Write Command: `RANGE:CAL:SCALE\t<value>\n`
+- Read Command: `RANGE:CAL:SCALE?\n`
+    - Example reply: `RANGE:CAL:SCALE?\t1.2032\n`
 - This command can be used to set or read the scale value of the selected range from the selected calibration mode (voltage or current)
 - When writing this command it is advised to use the scientific number format (1.1234E-01) with up to 7 digits
 - Command is only active for as long as the calibration mode is active
 - If calibration mode is not activated the device will return `No Cal!` as value
 
 #### Set Range Offset Value
-- Write Command: `RANGE:CAL:OFFSET` \[TAB\] `value` \[LF\]
-- Read Command: `RANGE:CAL:OFFSET?` \[LF\]
-    - Example reply: RANGE:CAL:OFFSET? \[TAB\] 647.5 \[LF\]
+- Write Command: `RANGE:CAL:OFFSET\t<value>\n`
+- Read Command: `RANGE:CAL:OFFSET?\n`
+    - Example reply: `RANGE:CAL:OFFSET?\t647.5\n`
 - This command can be used to set or read the offset value of the selected range from the selected calibration mode (voltage or current)
 - When writing this command it is advised to use the scientific number format (1.1234E-01) with up to 7 digits
 - Command is only active for as long as the calibration mode is active
@@ -704,9 +704,9 @@ This repository contains everything relating to the firmware of the OPET device 
 ### Fan Control
 
 #### Fan control mode
-- Write Command: `FAN:MODE` \[TAB\] `2` \[LF\]
-- Read Command: `FAN:MODE?` \[LF\]
-    - Example reply: FAN:MODE? \[TAB\] AUTO ON \[LF\]
+- Write Command: `FAN:MODE\t<mode>\n`
+- Read Command: `FAN:MODE?\n`
+    - Example reply: `FAN:MODE?\tAUTO ON\n`
 - This command is used the control the fan and change the control mode, accepted values are following:
     - `0` - manual control mode, fan turned off
     - `1` - manual control mode, fan turned on
@@ -719,24 +719,24 @@ This repository contains everything relating to the firmware of the OPET device 
 ### PI Driver Control
 
 #### Reference voltage DAC setpoint
-- Read Command: `DRIV:VSET?` \[LF\]
-    - Example reply: DRIV:VSET? \[TAB\] 10.45 \[LF\]
+- Read Command: `DRIV:VSET?\n`
+    - Example reply: `DRIV:VSET?\t10.45\n`
 - This read only command returns the setpoint voltage that controls the input of the PI regulator driver circuit
 - Useful for debugging and calibrating the DAC output
 
 #### Driver Proportional Gain Control
-- Write Command: `DRIV:IDGAIN` \[TAB\] `gain resistor ID` \[LF\]
-- Read Command: `DRIV:IDGAIN?` \[LF\]
-    - Example reply: DRIV:IDGAIN? \[TAB\] 1 \[LF\]
+- Write Command: `DRIV:IDGAIN\t<gain ID>\n`
+- Read Command: `DRIV:IDGAIN?\n`
+    - Example reply: `DRIV:IDGAIN?\t1\n`
 - This controls the proportional gain of the driver PI controller
 - Gain resistor ID values from 0 to 3 are valid, if the value is outside of those bounds will be cohered to the minim or maximum value
 - With increasing ID value, the proportional gain is reducing, which is in most cases increases the driver stability
 - Adjust this value to stabilize driver regulation in case of oscillations and to optimise voltage control step response
 
 #### Driver Integrator Capacitor Control
-- Write Command: `DRIV:IDINT` \[TAB\] `gain resistor ID` \[LF\]
-- Read Command: `DRIV:IDINT?` \[LF\]
-    - Example reply: DRIV:IDINT? \[TAB\] 1 \[LF\]
+- Write Command: `DRIV:IDINT\t<capacitor ID>\n`
+- Read Command: `DRIV:IDINT?\n`
+    - Example reply: `DRIV:IDINT?\t1\n`
 - This controls the integrator capacitor of the driver PI controller
 - Integrator capacitor ID values from 0 to 3 are valid, if the value is outside of those bounds will be cohered to the minim or maximum value
 - With increasing ID value, the integrator capacitor is increasing, this reduces the response time of the driver and is in most cases increasing the driver stability
@@ -745,26 +745,26 @@ This repository contains everything relating to the firmware of the OPET device 
 ### ADC Control Commands
 
 #### Number of Voltage and Current measurement averaged
-- Write Command: `ADC:AVR:VC` \[TAB\] `nu average measurements` \[LF\]
-- Read Command: `ADC:AVR:VC?` \[LF\]
-    - Example reply: ADC:AVR:VC? \[TAB\] 1 \[LF\]
+- Write Command: `ADC:AVR:VC\t<count>\n`
+- Read Command: `ADC:AVR:VC?\n`
+    - Example reply: `ADC:AVR:VC?\t1\n`
 - This command controls how many consecutive current and voltage load measurements are taken and averaged at each measurement cycle (does not impact IV data point averaging)
 - The value can range from `1` to `255` and is cohered to minimum or maximum if out of range
 - This can be used to greatly reduce the measurement fluctuations due to noise
 - When controlling this value, it is important to make sure the value is not too high to cause measurement cycle skipping, which happens, if the device is not "idle" before the measurement cycle time trigger is given
 
 #### Number of Other measurements averaged
-- Write Command: `ADC:AVR:OTHER` \[TAB\] `nu average measurements` \[LF\]
-- Read Command: `ADC:AVR:OTHER?` \[LF\]
-    - Example reply: ADC:AVR:OTHER? \[TAB\] 1 \[LF\]
+- Write Command: `ADC:AVR:OTHER\t<count>\n`
+- Read Command: `ADC:AVR:OTHER?\n`
+    - Example reply: `ADC:AVR:OTHER?\t1\n`
 - This command controls how many consecutive measurements of all other channels are taken and averaged at each measurement cycle
 - The value can range from `1` to `255` and is cohered to minimum or maximum if out of range
 - When controlling this value, it is important to make sure the value is not too high to cause measurement cycle skipping, which happens, if the device is not "idle" before the measurement cycle time trigger is given
 
 #### Number of Voltage and Current cycles averaged
-- Write Command: `ADC:CYCLES:VC` \[TAB\] `nu average measurements` \[LF\]
-- Read Command: `ADC:CYCLES:VC?` \[LF\]
-    - Example reply: ADC:CYCLES:VC? \[TAB\] 1 \[LF\]
+- Write Command: `ADC:CYCLES:VC\t<count>\n`
+- Read Command: `ADC:CYCLES:VC?\n`
+    - Example reply: `ADC:CYCLES:VC?\t1\n`
 - This command controls how many measurements over consecutive cycles are averaged in an continues stream for voltage and current only
 - The value can range from `1` to `100` and is cohered to minimum or maximum if out of range
 - Since this function averages over multiple measurement cycles at specific time intervals, this function can be used to reduce low frequency noise from power lines
@@ -775,15 +775,15 @@ This repository contains everything relating to the firmware of the OPET device 
 ### EEPROM Access Commands
 
 #### Write to EEPROM
-- Command: `EEROM:WRITE` \[TAB\] `register address` \[TAB\] `register value` \[LF\]
-    - Example reply EEROM:WRITE \[TAB\] 4 \[TAB\] 10 \[LF\]
+- Command: `EEROM:WRITE\t<address>\t<value>\n`
+    - Example reply: `EEROM:WRITE\t4\t10\n`
 - This write only command directly accesses the EEPROM and should be used carefully, as there is only a finite amount of write cycles of each address space in the EEPROM memory (\~100,000)
 - As shown above this command requires 2 variables, the register address and the associated register value
 - Refer to [EEPROM Address Specifications](#eeprom-address-specifications) for details regarding the register address and register value type
 
 #### Read from EEPROM
-- Command: `EEROM:READ?` \[TAB\] `register address` \[LF\]
-    - Example reply EEROM:READ? \[TAB\] 4 \[TAB\] 10 \[LF\]
+- Command: `EEROM:READ?\t<address>\n`
+    - Example reply: `EEROM:READ?\t4\t10\n`
 - This read only command directly accesses the EEPROM, reading from the EEPROM can be done infinite amount of times
 - As shown above this command requires the register address to be accessed and the reply will contain additionally the associated value at the register address
 - Refer to [EEPROM Address Specifications](#eeprom-address-specifications) for details regarding the register address and register value type
@@ -815,7 +815,7 @@ This repository contains everything relating to the firmware of the OPET device 
 |      5      | CPU Frequency Value                           | uint_32        |
 |      6      | Main Loop Timer Value                         | uint_16        |
 |      7      | Control timer loop multiplier                 | uint_8         |
-|      8      | Temperature measurement delay [cycles]        | uint_16        |
+|      8      | Temperature measurement delay [cycles]        | uint_8         |
 |     10      | ADC num. volt & curr meas. Averaged per cycle | uint_16        |
 |     11      | ADC num. other meas. Averages per cycle       | uint_8         |
 |     12      | ADC num. volt & curr meas. Cycles averaged    | uint_8         |
@@ -941,7 +941,7 @@ This repository contains everything relating to the firmware of the OPET device 
 - Register ID: `1`,
 - Value: default `NoErom!`, standard `Not Sure!`
 - Recognises a maximum of 20 characters, any more are truncated/removed
-- Can have signs, numbers, letters, pretty much anything, except of `@`, `:`, `TAB`, `NULL`, `CR`, `NL`
+- Can have signs, numbers, letters, pretty much anything, except of `@`, `:`, `\t`, `\0`, `\r`, `\n`
 
 #### Hardware config byte
 - Register ID: `2`,
@@ -1000,7 +1000,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 #### Temperature measurement loop timer multiplier
 - Register ID: `8`,
 - Value: default `120`, standard `120`
-- Value Range: `1 ... 65535`
+- Value Range: `1 ... 255`
 - This temperature measurement timer multiplier functions the same as the control loop timer, but it solely controls temperature measurement interval of the connected temperature sensor
 - as per default, the timer value in cycles is set to achieve a 500 ms measurement interval
 - This does nothing if the temperature measurement functionality if disabled in the EEPROM configuration
@@ -1088,7 +1088,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - setting this parameter to `0` disables the functionality, however current range control does wear out the mechanical relay slowly, so limiting switching can save the relay especially in conditions where the PI controller is instable at which point the current fluctuates fast
 
 #### Voltage range switching delay counter
-- Register ID: `84`
+- Register ID: `85`
 - Value: default `100`, standard `150`
 - Value Range: `0–255`
 - This parameter controls the delay time until the voltage measurement range is changed
@@ -1096,7 +1096,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 	- The counter is bound to the main measurement cycle
 
 #### Current range switching delay counter
-- Register ID: `85`
+- Register ID: `86`
 - Value: default `100`, standard `150`
 - Value Range: `0–255`
 - This parameter controls the delay time until the current measurement range is changed
@@ -1168,7 +1168,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 - The range selection in manual range selection mode is not impacted
 
 #### Voltage Range Enabled State Byte
-- Register ID: `82`
+- Register ID: `83`
 - Value: default `255`, standard `255`
 - Value Range: `unsigned 8-bit integer`
 - Each bit in the control byte belongs a difference range given as follows:
@@ -1179,7 +1179,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 	- All other bits: does not matter, best keep as True
 
 #### Current Range Enabled State Byte
-- Register ID: `83`
+- Register ID: `84`
 - Value: default `255`, standard `255`
 - Value Range: `unsigned 8-bit integer`
 - Each bit in the control byte belongs to a difference range given as follows:
@@ -1483,7 +1483,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 #### Load mode ID
 - Register ID: `166`
 - Value: default `0`, standard `0`
-- Value Range: `0 ... 4`
+- Value Range: `0 ... 5`
 - This defines the auto-start load mode ID, see details in [Load Mode control](#load-mode-control) for load mode ID definitions
 - To make use of the auto-start function define the load mode desired and enable the output on bit 0 in the system control byte
 
@@ -1575,12 +1575,12 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
 
 ## Calibration and adjustment procedure of a single range
 1. Connect the calibration cables required for the range and board type to be calibrated
-1. Sent a reset command to the OPET `\*RST` and wait until is rebooted (\~1s)
+1. Sent a reset command to the OPET `*RST` and wait until is rebooted (\~1s)
 1. Set the PV current and voltage measurement range ID to `0`, meaning you enter manual mode on both channels at the lowest range (`RANGE:IDVOLT 0` and `RANGE:IDCURR 0`)
 1. Set the desired range (voltage or current) to the range ID that is to be calibrated
 1. Enter calibration mode for the range type to be calibrated (current or voltage) using either `RANGE:CAL:MODE VOLT` or `RANGE:CAL:MODE CURR`
-1. Read the active range values with `RAGE:ACTVAL?` and depending on the range type to be calibrated use the voltage or current range value as the maximum source value for the calibration (scale value)
-    - i.e. for current range calibration with a OPET reply of ` RAGE:ACTVAL 1.0 0.15`, use 0.15 A as the scale value for the 0.15 A range to be calibrated
+1. Read the active range values with `RANGE:ACTVAL?` and depending on the range type to be calibrated use the voltage or current range value as the maximum source value for the calibration (scale value)
+    - i.e. for current range calibration with a OPET reply of `RANGE:ACTVAL\t1.0\t0.15`, use 0.15 A as the scale value for the 0.15 A range to be calibrated
 1. Update the measurement averaging configuration as required
 1. First measure at maximum scale: Set the calibrating source to maximum, wait to stabilize and record the Calibrator/DMM and OPET readings
     - The OPET readings will be in ADC counts, meaning they may be as much as 63000 depending on range
@@ -1590,7 +1590,7 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
     - Repeat measurements and average to achieve a better accuracy
 1. Calculate the calibration scale and offset factors
     - Use following formulas with *S* for scale measurement, *O* for offset measurement, *ref* from the reference calibrator / DMM and *dut* from the target OPET
-    - *Scale* factor: $Scale = \frac{(S_{ref} - O_{ref})}{(S_{dut} - S_{dut})}$
+    - *Scale* factor: $Scale = \frac{(S_{ref} - O_{ref})}{(S_{dut} - O_{dut})}$
     - *Offset* factor: $Offset = \frac{( - Scale*\ O_{dut} + O_{ref})}{Scale}$
 1. Check the deviation between old and new scale factors
     - Read the original scale and offset calibration factors using `RANGE:CAL:SCALE?` and `RANGE:CAL:OFFSET?`
@@ -1600,10 +1600,10 @@ $$C_{val} = \frac{t\ *{\ F}_{MCU}}{64}$$
     - Both should not be out by more than 2% of scale in case of a first calibration from standard EEPROM values, and much lower in case of a recalibration
         - If the deviation is excessive, there may be a problem in measurement set-up, cabling, the current bypass may have activated (reset manually)
         - In case of an active current bypass, check the maximum scale is correct for the range and board type and only if OK try to reset the current clamp after setting the maximum scale value on the calibration source as there may be an initial short current spike causing it to trigger
-1. If happy with the results send the new calibration factors to the OPET unit using `RANGE:CAL:SCALE \[*Scale*\]` and `RANGE:CAL:OFFSET \[*Offset*\]`
+1. If happy with the results send the new calibration factors to the OPET unit using `RANGE:CAL:SCALE\t<Scale>\n` and `RANGE:CAL:OFFSET\t<Offset>\n`
     - Make sure you use floating point formatting with exponent such as "6.489634E-02", up to \~ 7 digits accuracy can be represented with a single floating-point number this way
 1. Exit calibration mode using `RANGE:CAL:MODE 0` to finish the calibration of this range
-1. Reset the OPET device using `\*RST`
+1. Reset the OPET device using `*RST`
 
 ## Validation procedure of a single range
 - The validation of the calibration is pretty much the same as the calibration with the following exceptions:
